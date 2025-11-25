@@ -1,0 +1,350 @@
+import cv2
+import numpy
+import matplotlib.pyplot as plt
+import numpy as np
+
+def dadosImagem(imagem):
+    print("\nLargura em pixels: ", end='')
+    print(imagem.shape[1]) # Largura da imagem
+    print("Altura em pixels: ", end='')
+    print(imagem.shape[0]) # Altura da imagem
+    print("Qtde de canais: ", imagem.shape[2]) # Quantidade de Canais da Imagem - Imagem colorida possui 3 canais RGB
+    (b, g, r) = imagem[0,0] # RGB de pixel especifico
+    print("cor RGB de pixel especifico:", end="")
+    print("Azul: ", b , end="")
+    print(" Verde: ", g,  end="")
+    print(" Vermelho: ", r )
+    print("Corpo", imagem.shape)
+    print("Tamanho", imagem.size)
+    print("Número de dimensões", imagem.ndim)
+
+
+def separarCamada(imagem):
+    #Cria uma matriz do tamanho da imagem contendo somente 0
+    canalBlue = numpy.zeros((imagem.shape[0], imagem.shape[1], imagem.shape[2]), dtype=numpy.uint8)     
+    canalGreen = numpy.zeros((imagem.shape[0], imagem.shape[1], imagem.shape[2]), dtype=numpy.uint8)
+    canalRed = numpy.zeros((imagem.shape[0], imagem.shape[1], imagem.shape[2]), dtype=numpy.uint8)
+
+    canalBlue[:,:,0] = imagem[:,:,0] #Copia o canal azul para a nova matriz
+    canalGreen[:,:,1] = imagem[:,:,1]
+    canalRed[:,:,2] = imagem[:,:,2]
+
+    return canalBlue[:,:,0] , canalGreen[:,:,1], canalRed[:,:,2]
+
+def transformarCinza(imagem):
+    canalGray = numpy.zeros((imagem.shape[0], imagem.shape[1]), dtype=numpy.uint8)
+    for i in  range(imagem.shape[0]):
+        for j in range (imagem.shape[1]):
+            canalGray[i,j] = int(imagem[i, j].sum() // 3)
+    return canalGray
+
+def histograma(imagem, cor):
+    pixel = 256*[0] #Define eixo x
+    for i in range(256):
+        pixel[i]=i
+
+    plt.xlabel('Pixel')  #Nome eixo x
+    plt.ylabel('Quantidade') #Nome eixo y
+    plt.title('Histograma da imagem') #Titulo do plot
+
+    histograma = numpy.zeros(256, dtype=int) #Cria o histograma da imagem
+    for i in  range(imagem.shape[0]):
+        for j in range (imagem.shape[1]):
+            histograma[imagem[i,j]] += 1
+
+    plt.bar(pixel, histograma, color = cor)
+    plt.show()
+
+# Codigo do professor
+def hist(imagem, canal):
+    pixel = 256*[0] #Define eixo x
+    for i in range(256):
+        pixel[i]=i
+
+    plt.xlabel('Pixel')  #Nome eixo x
+    plt.ylabel('Quantidade') #Nome eixo y
+    plt.title('Histograma da imagem') #Titulo do plot
+
+    histograma = numpy.zeros(256, dtype=numpy.uint8)
+    for i in range(imagem.shape[0]):
+        for j in range(imagem.shape[1]):
+            histograma[imagem[i][j]] += 1
+
+    plt.bar(pixel, histograma, color = canal)
+    plt.show()
+
+def limiar(imagem, ponto, modo):
+    copia = numpy.zeros((imagem.shape[0], imagem.shape[1]), dtype=numpy.uint8)
+    for i in  range(imagem.shape[0]):
+        for j in range (imagem.shape[1]):
+            if modo == 1: # Remove parte clara
+                if imagem[i, j] > ponto:
+                    copia[i, j] = 255
+                else:
+                    copia[i, j] = 0
+            else: # Remove parte escura
+                if imagem[i, j] > ponto:
+                    copia[i, j] = imagem[i, j]
+                else:
+                    copia[i, j] = 255
+    return copia
+
+def limiar3ton(imagem, p1, p2):
+    copia = numpy.zeros((imagem.shape[0], imagem.shape[1]), dtype=numpy.uint8)
+    for i in  range(imagem.shape[0]):
+        for j in range (imagem.shape[1]):
+                if imagem[i, j] < p1: # Remove antes do primeiro ponto
+                    copia[i, j] = 255
+                if imagem[i, j] > p1 and imagem[i, j] < p2: # Remove entre o primeiro ponto e o segundo
+                    copia[i, j] = 255
+                if (imagem[i, j] > p2): # Remove depois do segundo ponto
+                    copia[i, j] = 255
+                else:
+                    copia[i, j] = imagem[i, j]
+    return copia
+
+# f(r) = s = cr + l
+def curvadeTom(imagem, c, l): # c é o contraste, l é luminosidade
+    plt.xlabel('Origem - r')  #Nome eixo x
+    plt.ylabel('Destino - s') #Nome eixo y
+    plt.title('Curva de Tom Original') #Titulo do plot
+    copia = numpy.zeros((imagem.shape[0], imagem.shape[1]), dtype=numpy.uint8)
+    for i in  range(imagem.shape[0]):
+        for j in range (imagem.shape[1]):
+            if (imagem[i, j]*c + l) > 255:
+                copia[i, j] = 255
+            else:
+                copia[i, j] = imagem[i, j]*c + l
+
+    pixel = 256*[0]
+    saida = 256*[0]
+    for i in range(256):
+        pixel[i] = i
+        resultado = i*c + l
+        if (resultado > 255):
+            saida[i] = 255
+        else:
+            saida[i] = resultado
+    plt.plot(pixel,saida)
+    plt.show()
+    return copia
+
+def curvadeTomNegativo(imagem):
+    pixel = 256*[0]
+    for i in range(256):
+        pixel[i] = i
+    plt.xlabel('Origem - r')  #Nome eixo x
+    plt.ylabel('Destino - s') #Nome eixo y
+    plt.title('Curva de Tom do Negativo da Imagem Original') #Titulo do plot
+    copia = numpy.zeros((imagem.shape[0], imagem.shape[1]), dtype=numpy.uint8)
+    for i in  range(imagem.shape[0]):
+        for j in range (imagem.shape[1]):
+            copia[i, j] = 255 - imagem[i, j]
+            
+    saida = 256*[0]
+    for i in range(256):
+        resultado =  255 - pixel[i]
+        if (resultado > 255):
+            saida[i] = 255
+        else:
+            saida[i] = resultado
+    plt.plot(pixel,saida)
+    plt.show()
+    return copia
+
+def curvadeTomParabolica(imagem):
+    pixel = 256*[0]
+    saida = 256*[0]
+
+    for i in range(256):
+        pixel[i] = i
+    plt.xlabel('Origem - r')  #Nome eixo x
+    plt.ylabel('Destino - s') #Nome eixo y
+    plt.title('Curva de Tom do Parabólica') #Titulo do plot
+    copia = numpy.zeros((imagem.shape[0], imagem.shape[1]), dtype=numpy.uint8)
+    for i in  range(imagem.shape[0]):
+        for j in range (imagem.shape[1]):
+            copia[i, j] = ((1/256)*imagem[i, j])**2
+            
+    
+    for i in range(256):
+        resultado =  ((1/256)*pixel[i])**2
+        if (resultado > 255):
+            saida[i] = 255
+        else:
+            saida[i] = resultado*255
+    plt.plot(pixel,saida)
+    plt.show()
+    return copia
+
+def ler_kernel():
+    matriz = []
+    tamanho = input("Digite o tamanho da matriz no formato 3x4 onde são 3 linhas e 4 colunas: ")
+    print(tamanho.split("x"))
+    linha = int(tamanho.split("x")[0])
+    coluna = int(tamanho.split("x")[1])
+    for k in range(linha):
+        linha_atual = []
+        for l in range(coluna):
+            valor = input("Digite o valor da matriz: ")
+            linha_atual.append(int(valor))
+        matriz.append(linha_atual)
+    return matriz
+
+def convolucao(imagem, kernel):
+    img = imagem.astype(float)
+
+    k = np.array(kernel, dtype=float)
+    k = np.flipud(np.fliplr(k))  # flip do kernel (convolução real)
+
+    k_linhas, k_colunas = k.shape
+    offset_l = k_linhas // 2
+    offset_c = k_colunas // 2
+
+    saida = np.zeros_like(img, dtype=float)
+
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+
+            soma = 0
+            for ki in range(k_linhas):
+                for kj in range(k_colunas):
+
+                    img_i = i + (ki - offset_l)
+                    img_j = j + (kj - offset_c)
+
+                    if 0 <= img_i < img.shape[0] and 0 <= img_j < img.shape[1]:
+                        soma += img[img_i, img_j] * k[ki, kj]
+
+            saida[i, j] = soma
+
+    # Normalização opcional:
+    saida = np.clip(saida, 0, 255)
+    return saida.astype(np.uint8)
+
+def erosao(imagem, kernel): # aumentar o branco
+    img = imagem.astype(np.uint8)
+    k = np.array(kernel, dtype=np.uint8)
+
+    k = np.flipud(np.fliplr(k))  # manter se quiser
+    k_linhas, k_colunas = k.shape
+
+    offset_l = k_linhas // 2
+    offset_c = k_colunas // 2
+
+    saida = np.zeros_like(img, dtype=np.uint8)
+
+    total_kernel = np.sum(k == 1)
+
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            contador = 0
+            for ki in range(k_linhas):
+                for kj in range(k_colunas):
+                    
+                    if k[ki, kj] == 1:
+                        img_i = i + ki - offset_l
+                        img_j = j + kj - offset_c
+
+                        if not (0 <= img_i < img.shape[0] and 0 <= img_j < img.shape[1]):
+                            contador = -1
+                            break
+
+                        if img[img_i, img_j] == 255:
+                            contador += 1
+
+                if contador == -1:
+                    break
+
+            saida[i, j] = 255 if contador == total_kernel else 0
+
+    return saida
+
+def dilatacao(imagem, kernel):
+    img = imagem.astype(np.uint8)
+    k = np.array(kernel, dtype=np.uint8)
+
+    k = np.flipud(np.fliplr(k))  # manter se quiser
+    k_linhas, k_colunas = k.shape
+
+    offset_l = k_linhas // 2
+    offset_c = k_colunas // 2
+
+    saida = np.zeros_like(img, dtype=np.uint8)
+
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+
+            ativar = False  # se algum 1 do kernel coincidir com 255 → pixel = 255
+
+            for ki in range(k_linhas):
+                for kj in range(k_colunas):
+
+                    if k[ki, kj] == 1:
+                        img_i = i + ki - offset_l
+                        img_j = j + kj - offset_c
+
+                        if 0 <= img_i < img.shape[0] and 0 <= img_j < img.shape[1]:
+
+                            # Se qualquer posição da vizinhança for branca → dilatação ativa
+                            if img[img_i, img_j] == 255:
+                                ativar = True
+                                break
+                if ativar:
+                    break
+            saida[i, j] = 255 if ativar else 0
+    return saida
+
+
+
+def main():
+    imagem = cv2.imread("imagens/img.png")
+    #dadosImagem(imagem)
+    #canalBlue, canalGreen, canalRed = separarCamada(imagem)
+    #canalGray = transformarCinza(imagem)
+    #histograma(canalGray, "Gray")
+    #cv2.imshow("CINZA",canalGray)
+    #cv2.imwrite("imagens/saida.jpg", canalGray)
+
+    #histograma(canalBlue, "Blue")
+    #histograma(canalGreen, "Green")
+    #histograma(canalRed, "Red")
+    #hist(imagem[:,:,0], "Blue") # Codigo do Professor
+    #hist(imagem[:,:,1], "Green") # Codigo do Professor
+    #hist(imagem[:,:,2], "Red") # Codigo do Professor
+    #cv2.imshow("Canal Blue", canalBlue)
+    #cv2.imshow("Canal Green", canalGreen)
+    #cv2.imshow("Canal Red", canalRed)
+    #cv2.imshow("Canal gray", canalGray)
+
+    #limiarizada = limiar(canalGray, 130, 1)
+    #limiarizada = limiar3ton(canalGray, 100, 200)
+    #cv2.imshow("Imagem Limiarizada", limiarizada)
+    
+    #ct = curvadeTomParabolica(canalGray)
+    #cv2.imshow("Imagem", ct)
+    #cv2.waitKey(0)
+
+    # Operação de Convolução Aula 18/11
+    #canalGray = transformarCinza(imagem)
+    #canalGray = canalGray.astype(float) # impede overflow
+    #kernel = ler_kernel()
+    #resultado = convolucao(canalGray, kernel)
+    #cv2.imshow("Convolução", resultado)
+    #cv2.waitKey(0)
+
+    # Processamento Aula 25/11 - 05
+    canalGray = transformarCinza(imagem)
+    kernel = np.array([[1, 1, 1],[1, 1, 1],[1, 1, 1]])
+    #histograma(canalGray, "Gray")
+    pb = limiar(canalGray,128,1)
+    erosada = erosao(pb,kernel)
+    dilatada = dilatacao(pb, kernel)
+    cv2.imshow("Preto e Branco", pb)
+    cv2.imshow("Erosada", erosada)
+    cv2.imshow("Dilatada", dilatada)
+    cv2.waitKey(0)
+
+
+if __name__ =='__main__':
+    main()

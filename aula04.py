@@ -184,56 +184,49 @@ def ler_kernel():
     linha = int(tamanho.split("x")[0])
     coluna = int(tamanho.split("x")[1])
     for k in range(linha):
-        linha = []
+        linha_atual = []
         for l in range(coluna):
             valor = input("Digite o valor da matriz: ")
-            linha.append(int(valor))
-        matriz.append(linha)
+            linha_atual.append(int(valor))
+        matriz.append(linha_atual)
     return matriz
 
 def convolucao(imagem, kernel):
+    img = imagem.astype(float)
 
-    img_linhas = len(imagem)
-    img_colunas = len(imagem[0])
+    k = np.array(kernel, dtype=float)
+    k = np.flipud(np.fliplr(k))  # 🔥 flip do kernel (convolução real)
 
-    k_linhas = len(kernel)
-    k_colunas = len(kernel[0])
-
+    k_linhas, k_colunas = k.shape
     offset_l = k_linhas // 2
     offset_c = k_colunas // 2
 
-    saida = [[0 for _ in range(img_colunas)] for _ in range(img_linhas)]
+    saida = np.zeros_like(img, dtype=float)
 
-    for i in range(img_linhas):
-        for j in range(img_colunas):
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
 
             soma = 0
-
             for ki in range(k_linhas):
                 for kj in range(k_colunas):
 
                     img_i = i + (ki - offset_l)
                     img_j = j + (kj - offset_c)
 
-                    # nao pegar pixels de fora da imagem
-                    if 0 <= img_i < img_linhas and 0 <= img_j < img_colunas:
-                        soma += imagem[img_i][img_j] * kernel[ki][kj]
+                    if 0 <= img_i < img.shape[0] and 0 <= img_j < img.shape[1]:
+                        soma += img[img_i, img_j] * k[ki, kj]
 
-            saida[i][j] = soma
+            saida[i, j] = soma
 
+    # Normalização opcional:
+    saida = np.clip(saida, 0, 255)
+    return saida.astype(np.uint8)
 
-    saida = np.array(saida, dtype=float)
-    saida -= saida.min()
-    if saida.max() != 0:
-        saida = (saida / saida.max()) * 255
-    saida = saida.astype(np.uint8)
-
-    return saida
 
 def main():
-    imagem = cv2.imread("imagens/imagem.jfif")
-    dadosImagem(imagem)
-    canalBlue, canalGreen, canalRed = separarCamada(imagem)
+    imagem = cv2.imread("imagens/Wolf and moon poster.jpg")
+    #dadosImagem(imagem)
+    #canalBlue, canalGreen, canalRed = separarCamada(imagem)
     canalGray = transformarCinza(imagem)
     #histograma(canalGray, "Gray")
     #cv2.imshow("CINZA",canalGray)
